@@ -1,0 +1,10 @@
+*.env
+*.env.local
+*application.properties
+*application.yml
+.idea
+*.jar
+.mvn
+*/target
+*.jar
+node_modules

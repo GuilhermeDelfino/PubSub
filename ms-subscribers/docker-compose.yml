@@ -1,0 +1,56 @@
+version: '3'
+services:
+  notification:
+    container_name: "ms-notification-service"
+    image: pub-sub-ms-notification:latest
+    ports:
+      - "8085:8085"
+    depends_on:
+      - subscribers
+      - events
+    network_mode: host
+
+  events:
+    container_name: "ms-events-service"
+    image: pub-sub-ms-events:latest
+    ports:
+      - "8084:8084"
+    network_mode: host
+  subscribers:
+    container_name: "ms-subscribers-service"
+    image: pub-sub-ms-subscribers:latest
+    ports:
+      - "8080:8080"
+    network_mode: host
+    depends_on:
+      - database
+      - cache
+  database:
+      image: postgres
+      container_name: "ms-subscribers-postgres"
+      ports:
+        - "5432:5432"
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: Acesso@2023
+        PGDATA: /data/postgres
+      volumes:
+        - postgres:/data/postgres
+      restart: unless-stopped
+      network_mode: host
+
+  cache:
+    image: redis
+    container_name: "ms-subscribers-cache"
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - cache:/data
+    network_mode: host
+
+volumes:
+  postgres:
+    driver: local
+  cache:
+    driver: local

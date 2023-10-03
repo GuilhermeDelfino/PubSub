@@ -1,0 +1,5 @@
+.message {
+  font-weight: 500;
+  margin: 4px 0;
+  color: var(--color-success);
+}

@@ -1,0 +1,168 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Acesso@2023
+      PGDATA: /data/postgres
+    restart: unless-stopped
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    networks:
+      - project
+  
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes: 
+      - redis:/data
+    networks:
+      - project
+
+  rabbitmq:
+    image: rabbitmq:management
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - project
+    volumes:
+      - ./init/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./init/definitions.json:/etc/rabbitmq/definitions.json:ro
+    
+
+  discovery:
+    image: pub-sub-service-discovery
+    restart: on-failure
+    ports:
+      - '8761:8761'
+    networks:
+      - project
+    depends_on:
+      - rabbitmq
+      - redis
+      - postgres
+
+  gateway:
+    image: pub-sub-gateway
+    restart: on-failure
+    ports:
+      - '8080:8080'
+    networks:
+      - project
+    depends_on:
+      - discovery
+      
+
+  auth:
+    image: pub-sub-auth
+    restart: on-failure
+    ports:    
+      - '8085:8085'
+    networks:
+      - project
+    depends_on:
+      - gateway
+      - discovery
+
+
+  ms-subscribers:
+    image: pub-sub-ms-subscribers
+    restart: on-failure
+    ports:    
+      - '8082:8082'
+    networks:
+      - project
+    depends_on:
+      - discovery
+      - auth
+
+  ms-events:
+    image: pub-sub-ms-events
+    restart: on-failure
+    ports:    
+      - '8084:8084'
+    networks:
+      - project
+    depends_on:
+      - discovery
+      - auth
+
+  ms-notification-1:
+    image: pub-sub-ms-notification
+    volumes:
+      - ./HtmlEventTemplate.html:/HtmlEventTemplate.html
+    restart: on-failure
+    healthcheck:
+      test: curl -sS http://127.0.0.1 || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 3
+    ports:    
+      - '8083:8083'
+    networks:
+      - project
+    depends_on:
+      - discovery
+      - gateway
+      - auth
+      - ms-subscribers
+
+  ms-notification-2:
+    image: pub-sub-ms-notification
+    restart: on-failure
+    ports:    
+      - '8093:8083'
+    networks:
+      - project
+    depends_on:
+      - discovery
+
+  bff-site:
+    image: pub-sub-bff-site
+    restart: on-failure
+    ports:    
+      - '3332:3332'
+    networks:
+      - project
+    depends_on:
+      - ms-notification-1
+      - gateway
+      - ms-subscribers
+      - ms-events
+      - discovery
+      - auth
+
+  site-1:
+    image: pub-sub-site
+    restart: on-failure
+    environment:
+      BFF_SITE: bff-site
+    ports:    
+      - '3000:3000'
+    networks:
+      - project
+    depends_on:
+      - bff-site
+
+
+# Later add prometheus, grafana, BFF and 2 Frontend with Nginx SSL certificate
+
+
+networks:
+  project:
+    driver: bridge
+
+volumes:
+    postgres_data:
+    redis:

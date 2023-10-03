@@ -1,0 +1,17 @@
+type Subscriber {
+    id: ID
+    name: String
+    subscribeDate: String
+    email: String
+}
+input CreateSubscriberInput {
+    name: String!
+    email: String!
+}
+type Mutation {
+        createSubscriber(input: CreateSubscriberInput): Subscriber
+}
+type Query {
+    findAll: [Subscriber]
+    findById(id: ID): Subscriber
+}

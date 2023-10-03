@@ -1,0 +1,11 @@
+.date_and_location {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.divider {
+  height: 1px;
+  width: 100%;
+  background: var(--container-shadow);
+  margin-bottom: 40px;
+}
